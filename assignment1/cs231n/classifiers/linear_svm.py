@@ -35,7 +35,9 @@ def svm_loss_naive(W, X, y, reg):
       if margin > 0:
         loss += margin
         dW[:,y[i]] += -X[i,:] # compute the correct gradient!
+							  # care why that is subtracted!
         dW[:,j] += X[i,:]     # compute the wrong gradient!
+							  # care why there is added!
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
@@ -67,7 +69,7 @@ def svm_loss_vectorized(W, X, y, reg):
   """
   loss = 0.0
   dW = np.zeros(W.shape) # initialize the gradient as zero
-  num_trian = X.shape[0]
+  num_train = X.shape[0]
   num_classes = W.shape[1]
   #############################################################################
   # TODO:                                                                     #
@@ -75,11 +77,13 @@ def svm_loss_vectorized(W, X, y, reg):
   # result in loss.                                                           #
   #############################################################################
   scores = X.dot(W)
-  correct_scores = scores[np.arange(num_trian),y]
+  correct_scores = scores[np.arange(num_train),y]
+  correct_scores = np.reshape(correct_scores,(-1,1))
   margin = scores - correct_scores + 1
+  margin[np.arange(num_train),y] = 0 #set the correct label loss to zeros!
   boo1_mar = margin > 0
-  dW = X.T.dot(boo1_mar)
-
+  loss = np.sum(margin * boo1_mar) / num_train # xompute the loss total!
+  loss += 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -94,7 +98,11 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  trans_mat = np.ones(boo1_mar.shape)
+  boo1_mar =boo1_mar * trans_mat
+  boo1_mar[np.arange(num_train),y] = - np.sum(boo1_mar,axis = 1)
+  dW = (X.T).dot(boo1_mar) / num_train # compute wrong gradient
+  dW += reg * W
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################

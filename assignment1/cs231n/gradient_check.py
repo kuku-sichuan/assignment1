@@ -115,8 +115,10 @@ def grad_check_sparse(f, x, analytic_grad, num_checks=10, h=1e-5):
     fxph = f(x) # evaluate f(x + h)
     x[ix] = oldval - h # increment by h
     fxmh = f(x) # evaluate f(x - h)
-    x[ix] = oldval # reset
-
+    x[ix] = oldval # reset 
+	# remember the position must reback!
+	# how to implement the gradients check!
+	
     grad_numerical = (fxph - fxmh) / (2 * h)
     grad_analytic = analytic_grad[ix]
     rel_error = abs(grad_numerical - grad_analytic) / (abs(grad_numerical) + abs(grad_analytic))

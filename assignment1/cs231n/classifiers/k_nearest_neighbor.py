@@ -73,7 +73,7 @@ class KNearestNeighbor(object):
         # not use a loop over dimension.                                    #
         #####################################################################
         #try:
-        dists[i,j] = np.sum((self.X_train[j,:] - X[i,:])**2)
+        dists[i,j] = np.sqrt(np.sum((self.X_train[j,:] - X[i,:])**2))
         #except:
          # raise ValueError("maybe the shape between \
           #  train and test isn't same")
@@ -98,8 +98,7 @@ class KNearestNeighbor(object):
       # Compute the l2 distance between the ith test point and all training #
       # points, and store the result in dists[i, :].                        #
       #######################################################################
-      dists[i,:] = np.sum((self.X_train - X[i,:]) * (self.X_train - X[i,:])\
-	  ,axis=1)
+      dists[i,:] = np.sqrt(np.sum(np.square(self.X_train - X[i,:]),axis=1))
       #######################################################################
       #                         END OF YOUR CODE                            #
       #######################################################################
@@ -128,10 +127,14 @@ class KNearestNeighbor(object):
     #       and two broadcast sums.                                         #
     #########################################################################
 	# care about{np.reshape how to work}
-    X_train = np.reshape(self.X_train,(1,self.X_train.shape[0]\
-    ,self.X_train.shape[1]))
-    X_1 = np.reshape(X,(X.shape[0],1,X.shape[1]))
-    dists = np.sum((X_train - X_1) * (X_train - X_1),axis =2)
+	# we can directly regard the array as number to compute,but care dimension
+	# correspond!
+    dists = np.multiply(np.dot(X,self.X_train.T),-2)
+    sq1 = np.sum(np.square(X),axis= 1,keepdims= True)
+    sq2 = np.sum(np.square(self.X_train),axis = 1)
+    dists = np.add(dists,sq1)
+    dists = np.add(dists,sq2)
+    dists = np.sqrt(dists)
     #########################################################################
     #                         END OF YOUR CODE                              #
     #########################################################################
@@ -173,8 +176,7 @@ class KNearestNeighbor(object):
       # Store this label in y_pred[i]. Break ties by choosing the smaller     #
       # label.                                                                #
       #########################################################################
-      value,_ = stats.mode(closest_y)
-      y_pred[i] = value
+      y_pred[i] = np.argmax(np.bincount(closest_y))
       #########################################################################
       #                           END OF YOUR CODE                            #
       #########################################################################

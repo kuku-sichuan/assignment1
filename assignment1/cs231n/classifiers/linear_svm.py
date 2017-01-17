@@ -81,8 +81,8 @@ def svm_loss_vectorized(W, X, y, reg):
   correct_scores = np.reshape(correct_scores,(-1,1))
   margin = scores - correct_scores + 1
   margin[np.arange(num_train),y] = 0 #set the correct label loss to zeros!
-  boo1_mar = margin > 0
-  loss = np.sum(margin * boo1_mar) / num_train # xompute the loss total!
+  margin[margin <= 0] = 0.0
+  loss = np.sum(margin) / num_train # compute the loss total!
   loss += 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
@@ -98,10 +98,9 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  trans_mat = np.ones(boo1_mar.shape)
-  boo1_mar =boo1_mar * trans_mat
-  boo1_mar[np.arange(num_train),y] = - np.sum(boo1_mar,axis = 1)
-  dW = (X.T).dot(boo1_mar) / num_train # compute wrong gradient
+  margin[margin > 0] = 1.0
+  margin[np.arange(num_train),y] = - np.sum(margin,axis = 1)
+  dW = (X.T).dot(margin) / num_train # compute wrong gradient
   dW += reg * W
   #############################################################################
   #                             END OF YOUR CODE                              #

@@ -17,7 +17,7 @@ class TwoLayerNet(object):
   The outputs of the second fully-connected layer are the scores for each class.
   """
 
-  def __init__(self, input_size, hidden_size, output_size, std=1e-4):
+  def __init__(self, input_size, hidden_size, output_size,std=1e-4):
     """
     Initialize the model. Weights are initialized to small random values and
     biases are initialized to zero. Weights and biases are stored in the
@@ -36,10 +36,11 @@ class TwoLayerNet(object):
     self.params = {}
     self.params['W1'] = std * np.random.randn(input_size, hidden_size)
     self.params['b1'] = np.zeros(hidden_size)
+    # care the diffence of initialization between weights and biases
     self.params['W2'] = std * np.random.randn(hidden_size, output_size)
     self.params['b2'] = np.zeros(output_size)
-
-  def loss(self, X, y=None, reg=0.0):
+    
+  def loss(self, X, y=None,drops2 = 0., reg=0.0):
     """
     Compute the loss and gradients for a two layer fully connected neural
     network.
@@ -74,7 +75,12 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    H = np.maximum(0,X.dot(W1) + b1)
+    H = dropout(H,drops2)
+    scores = H.dot(W2) + b2
+
+
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,10 +98,17 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    f = scores - np.max(scores,axis = 1,keepdims=True)
+    scores = np.exp(f)
+    scores = scores / np.sum(scores,axis = 1,keepdims=True)
+
+    loss = np.sum(-np.log(scores[range(N),y])) / N
+    # the regularization isn't need to divide N
+    loss += 0.5 * reg * np.sum(W1 * W1)
+    loss += 0.5 * reg * np.sum(W2 * W2)
     #############################################################################
     #                              END OF YOUR CODE                             #
-    #############################################################################
+    ############################################################################
 
     # Backward pass: compute gradients
     grads = {}
@@ -104,7 +117,20 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    for i in self.params:
+        grads[i] = np.zeros_like(self.params[i])
+
+    dscores = scores
+    dscores[np.arange(N),y] -= 1
+    dscores /= N
+    # careful,the W ,b aren't same time to backward!we only need the its weight
+    # gradents of b, not need the hidden value of b.
+    grads['W2'] = np.dot(H.T,dscores) + reg * W2
+    grads['b2'] = np.sum(dscores.T, axis=1)
+    dH = np.dot(dscores, W2.T) # (N,H)
+    dH[H <= 0] = 0
+    grads['W1'] = np.dot(X.T, dH) + reg * W1# (D,H)
+    grads['b1'] = np.sum(dH.T, axis=1)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -113,7 +139,7 @@ class TwoLayerNet(object):
 
   def train(self, X, y, X_val, y_val,
             learning_rate=1e-3, learning_rate_decay=0.95,
-            reg=1e-5, num_iters=100,
+            reg=1e-5,drops1 = 0.,num_iters=100,
             batch_size=200, verbose=False):
     """
     Train this neural network using stochastic gradient descent.
@@ -148,13 +174,14 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+      batch_index = np.random.choice(num_train,batch_size,replace=True)
+      X_batch = X[batch_index,:]
+      y_batch = y[batch_index]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
-
       # Compute loss and gradients using the current minibatch
-      loss, grads = self.loss(X_batch, y=y_batch, reg=reg)
+      loss, grads = self.loss(X_batch, y=y_batch,drops2=drops1, reg=reg)
       loss_history.append(loss)
 
       #########################################################################
@@ -163,7 +190,11 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+  
+      self.params['W1'] += -learning_rate * grads['W1']
+      self.params['b1'] += -learning_rate * grads['b1']
+      self.params['W2'] += -learning_rate * grads['W2']
+      self.params['b2'] += -learning_rate * grads['b2']
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -208,11 +239,27 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    h1 = np.maximum(0,X.dot(self.params['W1']) + self.params['b1'])
+    h2 = h1.dot(self.params['W2']) + self.params['b2']
+    h2 = h2 - np.max(h2,axis=1,keepdims=True)
+    scores = np.exp(h2)
+    scores /= np.sum(scores,axis=1,keepdims=True)
+    y_pred = np.argmax(scores,axis=1)
+
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
 
     return y_pred
+def dropout(X,level):
+    if level < 0. or level >= 1.:
+        raise Exception("dropout maust be in interval [0,1]")
+
+    retain_prob = 1. - level
+
+    sample = np.random.binomial(1,p=retain_prob,size=X.shape)
+    X *=sample
+    X /= retain_prob
+    return X
 
 
